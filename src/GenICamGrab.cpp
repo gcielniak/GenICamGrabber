@@ -26,11 +26,17 @@ int main(int argc, char* argv[])
 
 	camera.Connect(viewer);
 
-	camera.Start();
+	try {
+		camera.Start();
 
-	while (viewer.IsRunning());
-	
-	camera.Stop();
+		while (viewer.IsRunning());
+
+		camera.Stop();
+	}
+	catch (LibException& e)	{
+		cerr << e.what() << endl;
+		return 0;
+	}
 
 	return 0;
 }
