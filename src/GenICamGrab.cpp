@@ -20,18 +20,24 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-	GenICamera camera;
+	GenICamera camera, camera2;
 
-	ImageViewer viewer("IViewer");
+	ImageViewer viewer("Viewer 1"), viewer2("Viewer 2");
 
 	camera.Connect(viewer);
+	camera2.Connect(viewer2);
 
 	try {
-		camera.Start();
+		camera2.Init();
+		camera2.SetCamera(1);
 
-		while (viewer.IsRunning());
+		camera.Start();
+		camera2.Start();
+
+		while (viewer.IsRunning() && viewer2.IsRunning());
 
 		camera.Stop();
+		camera2.Stop();
 	}
 	catch (LibException& e)	{
 		cerr << e.what() << endl;

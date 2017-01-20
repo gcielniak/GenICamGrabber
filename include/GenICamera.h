@@ -10,7 +10,8 @@ using namespace std;
 
 class GenICamera : public Module {
 protected:
-	bool is_running, initialised;
+	bool is_running = false;
+	bool initialised = false;
 	IMG hCamera = NULL;
 	boost::thread thread;
 
@@ -27,7 +28,20 @@ protected:
 
 	void Capture() {
 		//start grabbing
-		cv::Mat image(cv::Size(ImageWidth(hCamera), ImageHeight(hCamera)), ocv_depth(ImageDatatype(hCamera, 0)));
+
+		int type;
+
+		if (ImageDimension(hCamera) == 3)
+			type = CV_8UC3;
+		else
+			type = CV_8U;
+		cv::Mat image(cv::Size(ImageWidth(hCamera), ImageHeight(hCamera)), type);
+
+		if (type == CV_8UC3) {
+			cv::Mat image2(cv::Size(ImageWidth(hCamera), ImageHeight(hCamera)), type);
+			cv::cvtColor(image, image2, CV_BGR2RGB);
+			image = image2;
+		}
 		double t_start = 0.0, t_now;
 		while (is_running) {
 			if (G2Wait(hCamera) >= 0) {
@@ -46,8 +60,7 @@ protected:
 	}
 
 public:
-	GenICamera() :
-		is_running(false), initialised(false) {
+	GenICamera() {
 	}
 
 	~GenICamera() {
@@ -173,6 +186,17 @@ public:
 		return value;
 	}
 
+	void SetCamera(int index) {
+		if (CanCameraSelect2(hCamera))
+			CS2SetCamPort(hCamera, index, 0, hCamera);
+	}
+
+	int GetCameraIndex() {
+		cvbval_t port;
+		CS2GetCamPort(hCamera, port);
+		return port;
+	}
+
 	string GetNodeValue(string node_name) {
 		NODE node;
 		NODEMAP node_map;
@@ -223,4 +247,3 @@ public:
 		return is_running;
 	}
 };
-
