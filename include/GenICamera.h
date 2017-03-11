@@ -13,6 +13,7 @@ protected:
 	bool is_running = false;
 	bool initialised = false;
 	IMG hCamera = NULL;
+	NODEMAP node_map = NULL;
 	boost::thread thread;
 
 	int ocv_depth(cvbdatatype_t cvbDt) {
@@ -31,24 +32,35 @@ protected:
 
 		int type;
 
+		cvbdatatype_t data_type = ImageDatatype(hCamera, 0);
+
+		cerr << BitsPerPixel(data_type) << endl;
+
 		if (ImageDimension(hCamera) == 3)
 			type = CV_8UC3;
 		else
 			type = CV_8U;
-		cv::Mat image(cv::Size(ImageWidth(hCamera), ImageHeight(hCamera)), type);
 
-		if (type == CV_8UC3) {
-			cv::Mat image2(cv::Size(ImageWidth(hCamera), ImageHeight(hCamera)), type);
-			cv::cvtColor(image, image2, CV_BGR2RGB);
-			image = image2;
-		}
+		cv::Mat image2(cv::Size(ImageWidth(hCamera), ImageHeight(hCamera)), type);
+		cv::Mat image3(cv::Size(ImageWidth(hCamera), ImageHeight(hCamera)), CV_16UC1);
 		double t_start = 0.0, t_now;
 		while (is_running) {
 			if (G2Wait(hCamera) >= 0) {
+				cv::Mat image(cv::Size(ImageWidth(hCamera), ImageHeight(hCamera)), type);
 				//assign newly captured buffer to OpenCV Mat object
 				void* ppixels = nullptr; intptr_t xInc = 0; intptr_t yInc = 0;
 				GetLinearAccess(hCamera, 0, &ppixels, &xInc, &yInc);
 				image.data = (uchar*)ppixels;
+				if (type == CV_8UC3) {
+					cv::cvtColor(image, image2, CV_BGR2RGB);
+					image = image2;
+				}
+				else if (type == CV_8U) {
+					image.convertTo(image3, CV_16UC1);
+					image3 *= 256;
+					image = image3;
+				}
+
 				//calculate timestamp in nanoseconds
 				G2GetGrabStatus(hCamera, GRAB_INFO_CMD::GRAB_INFO_TIMESTAMP, t_now);
 				if (t_start == 0.0)
@@ -65,6 +77,7 @@ public:
 
 	~GenICamera() {
 		Stop();
+		ReleaseObject(node_map);
 		ReleaseObject(hCamera);
 	}
 
@@ -80,6 +93,7 @@ public:
 			if (!LoadImageFile(driverPath, hCamera))
 				throw LibException("GenICamera::Init, Error loading \"" + std::string(driverPath) + "\" driver!");
 			initialised = true;
+			NMHGetNodeMap(hCamera, node_map);
 		}
 	}
 
@@ -187,8 +201,10 @@ public:
 	}
 
 	void SetCamera(int index) {
-		if (CanCameraSelect2(hCamera))
+		if (CanCameraSelect2(hCamera)) {
 			CS2SetCamPort(hCamera, index, 0, hCamera);
+			NMHGetNodeMap(hCamera, node_map);
+		}
 	}
 
 	int GetCameraIndex() {
@@ -199,27 +215,86 @@ public:
 
 	string GetNodeValue(string node_name) {
 		NODE node;
-		NODEMAP node_map;
-		TNodeType node_type;
 		char name[256] = { 0 };
 		size_t name_size = sizeof(name);
 
-		NMHGetNodeMap(hCamera, node_map);
 		NMGetNode(node_map, node_name.c_str(), node);
-		NType(node, node_type);
-		if (node_type == NT_String)
-			NGetAsString(node, name, name_size);
+		NGetAsString(node, name, name_size);
 		ReleaseObject(node);
-		ReleaseObject(node_map);
 
 		return name;
+	}
+
+	double GetNodeValueDouble(string node_name) {
+		NODE node;
+		double value;
+
+		NMGetNode(node_map, node_name.c_str(), node);
+		NGetAsFloat(node, value);
+		ReleaseObject(node);
+
+		return value;
+	}
+
+	bool GetNodeValueBoolean(string node_name) {
+		NODE node;
+		cvbbool_t value;
+
+		NMGetNode(node_map, node_name.c_str(), node);
+		NGetAsBoolean(node, value);
+		ReleaseObject(node);
+
+		return value ? true : false;
+	}
+
+	int GetNodeValueInteger(string node_name) {
+		NODE node;
+		cvbint64_t value;
+
+		NMGetNode(node_map, node_name.c_str(), node);
+		NGetAsInteger(node, value);
+		ReleaseObject(node);
+
+		return (int)value;
+	}
+
+	void SetNodeValue(string node_name, string value) {
+		NODE node;
+
+		NMGetNode(node_map, node_name.c_str(), node);
+		NSetAsString(node, value.c_str());
+		ReleaseObject(node);
+	}
+
+	void SetNodeValue(string node_name, double value) {
+		NODE node;
+
+		NMGetNode(node_map, node_name.c_str(), node);
+		NSetAsFloat(node, value);
+		ReleaseObject(node);
+	}
+
+	void SetNodeValue(string node_name, int value) {
+		NODE node;
+
+		NMGetNode(node_map, node_name.c_str(), node);
+		NSetAsInteger(node, value);
+		ReleaseObject(node);
+	}
+
+	void SetNodeValue(string node_name, bool value) {
+		NODE node;
+
+		NMGetNode(node_map, node_name.c_str(), node);
+		NSetAsBoolean(node, value);
+		ReleaseObject(node);
 	}
 
 	string GetDeviceName(int index) {
 		stringstream device_name;
 
 		if (index < GetNrDevices()) {
-			device_name << GetNodeValue("DeviceFamilyName" );
+			device_name << GetNodeValue("DeviceFamilyName");
 			device_name << " " << GetNodeValue("DeviceModelName");
 			device_name << " by " << GetNodeValue("DeviceVendorName");
 		}
@@ -227,18 +302,65 @@ public:
 		return device_name.str();
 	}
 
+	void Gain(double value) { SetNodeValue("Gain", value); }
+	double Gain() { return GetNodeValueDouble("Gain"); }
+
+	void ExposureTime(double value) { SetNodeValue("ExposureTime", value); }
+	double ExposureTime() { return GetNodeValueDouble("ExposureTime"); }
+
+	void AutoBrightness(bool value) { SetNodeValue("autoBrightnessMode", value ? 1 : 0); }
+	bool AutoBrightness() { return (GetNodeValue("autoBrightnessMode") == "Active") ? true : false; }
+
+	void BalanceRatioRed(double value) {
+		SetNodeValue("BalanceRatioSelector", "Red");
+		SetNodeValue("BalanceRatio", value);
+	}
+
+	double BalanceRatioRed() {
+		SetNodeValue("BalanceRatioSelector", "Red");
+		return GetNodeValueDouble("BalanceRatio");
+	}
+
+	void BalanceRatioGreen(double value) {
+		SetNodeValue("BalanceRatioSelector", "Green");
+		SetNodeValue("BalanceRatio", value);
+	}
+
+	double BalanceRatioGreen() {
+		SetNodeValue("BalanceRatioSelector", "Green");
+		return GetNodeValueDouble("BalanceRatio");
+	}
+
+	void BalanceRatioBlue(double value) {
+		SetNodeValue("BalanceRatioSelector", "Blue");
+		SetNodeValue("BalanceRatio", value);
+	}
+
+	double BalanceRatioBlue() {
+		SetNodeValue("BalanceRatioSelector", "Blue");
+		return GetNodeValueDouble("BalanceRatio");
+	}
+
+	void TriggerMode(bool value) { SetNodeValue("TriggerMode", value ? 1 : 0); }
+	bool TriggerMode() { return (GetNodeValueInteger("TriggerMode") == 1) ? true : false; }
+
+	void TriggerSoftware() { SetNodeValue("TriggerSoftware", true); }
+
 	void Start() {
-		Init();
-		if (G2Grab(hCamera) < 0) {
-			throw LibException("GenICamera::Capture, G2Grab function failure.");
-			return;
+		if (!is_running) {
+			Init();
+			if (G2Grab(hCamera) < 0) {
+				throw LibException("GenICamera::Capture, G2Grab function failure.");
+				return;
+			}
+			thread = boost::thread(&GenICamera::Capture, this);
+			is_running = true;
 		}
-		thread = boost::thread(&GenICamera::Capture, this);
-		is_running = true;
 	}
 
 	void Stop() {
 		is_running = false;
+		initialised = false;
 		thread.join();
 		G2Freeze(hCamera, true);
 	}
