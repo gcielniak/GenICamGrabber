@@ -46,6 +46,7 @@ public:
 			cv::resizeWindow(window_name, image.cols / 4, image.rows / 4);
 			init = false;
 		}
+
 		cv::imshow(window_name, image);
 		if (cv::waitKey(2) > 0) {
 			boost::unique_lock<boost::mutex> lock(mutex);

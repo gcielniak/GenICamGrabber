@@ -14,34 +14,30 @@
 
  //#include <Windows.h>
 #include "ImageViewer.h"
-#include "GenICamera.h"
+#include "GenICamGrabber.h"
 
 using namespace std;
 
 int main(int argc, char* argv[])
 {
-	GenICamera camera, camera2;
+	GenICamGrabber camera, camera2;
 
 	ImageViewer viewer("Viewer 1"), viewer2("Viewer 2");
 
 	camera.Connect(viewer);
-//	camera2.Connect(viewer2);
+	camera2.Connect(viewer2);
 
 	try {
-//		camera2.Init();
-//		camera2.SetCamera(1);
+		camera2.Init();
+		camera2.SetCamera(1);
 		camera.Init();
 
 		camera.AutoBrightness(true);
 		camera.TriggerMode(false);
 		cerr << "TriggerMode " << camera.TriggerMode() << endl;
-		camera.TriggerMode(true);
-		cerr << "TriggerMode " << camera.TriggerMode() << endl;
-		camera.TriggerMode(false);
-		cerr << "TriggerMode " << camera.TriggerMode() << endl;
 
 		camera.Start();
-//		camera2.Start();
+		camera2.Start();
 
 //		camera.genicam_access();
 
@@ -59,23 +55,10 @@ int main(int argc, char* argv[])
 		camera.TriggerMode(false);
 		cerr << "TriggerMode " << camera.TriggerMode() << endl;
 
-//		camera.Stop();
-
-		camera.TriggerMode(false);
-		cerr << "TriggerMode " << camera.TriggerMode() << endl;
-		camera.TriggerMode(true);
-		cerr << "TriggerMode " << camera.TriggerMode() << endl;
-		camera.TriggerMode(false);
-		cerr << "TriggerMode " << camera.TriggerMode() << endl;
-
-		camera.Start();
-
-		while (viewer.IsRunning() && viewer2.IsRunning()) {
-//			camera.TriggerSoftware();
-		}
+		while (viewer.IsRunning() && viewer2.IsRunning());
 
 		camera.Stop();
-//		camera2.Stop();
+		camera2.Stop();
 	}
 	catch (LibException& e)	{
 		cerr << e.what() << endl;

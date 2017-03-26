@@ -1,87 +1,25 @@
-#pragma once
-#include <boost/thread.hpp>
+
 #include <iCVCDriver.h>
 #include <iCVCUtilities.h>
 #include <iCVGenApi.h>
 #include <CVCError.h>
-#include "Module.h"
 
 using namespace std;
 
-class GenICamera : public Module {
+class GenICamDevice {
 protected:
-	bool is_running = false;
 	bool initialised = false;
 	IMG hCamera = NULL;
 	NODEMAP node_map = NULL;
-	boost::thread thread;
-
-	int ocv_depth(cvbdatatype_t cvbDt) {
-		// map compatible cvb data type descriptors to OpenCV data types 
-		switch (cvbDt & 0xFF) {
-		case 8: return IsSignedDatatype(cvbDt) ? CV_8S : CV_8U;
-		case 16: return IsSignedDatatype(cvbDt) ? CV_16S : CV_16U;
-		case 32: return IsFloatDatatype(cvbDt) ? CV_32F : CV_32S;
-		case 64: return IsFloatDatatype(cvbDt) ? CV_64F : 0;
-		default: return 0;
-		}
-	}
-
-	void Capture() {
-		//start grabbing
-
-		int type;
-
-		cvbdatatype_t data_type = ImageDatatype(hCamera, 0);
-
-		cerr << BitsPerPixel(data_type) << endl;
-
-		if (ImageDimension(hCamera) == 3)
-			type = CV_8UC3;
-		else
-			type = CV_8U;
-
-		cv::Mat image2(cv::Size(ImageWidth(hCamera), ImageHeight(hCamera)), type);
-		cv::Mat image3(cv::Size(ImageWidth(hCamera), ImageHeight(hCamera)), CV_16UC1);
-		double t_start = 0.0, t_now;
-		while (is_running) {
-			if (G2Wait(hCamera) >= 0) {
-				cv::Mat image(cv::Size(ImageWidth(hCamera), ImageHeight(hCamera)), type);
-				//assign newly captured buffer to OpenCV Mat object
-				void* ppixels = nullptr; intptr_t xInc = 0; intptr_t yInc = 0;
-				GetLinearAccess(hCamera, 0, &ppixels, &xInc, &yInc);
-				image.data = (uchar*)ppixels;
-				if (type == CV_8UC3) {
-					cv::cvtColor(image, image2, CV_BGR2RGB);
-					image = image2;
-				}
-				else if (type == CV_8U) {
-					image.convertTo(image3, CV_16UC1);
-					image3 *= 256;
-					image = image3;
-				}
-
-				//calculate timestamp in nanoseconds
-				G2GetGrabStatus(hCamera, GRAB_INFO_CMD::GRAB_INFO_TIMESTAMP, t_now);
-				if (t_start == 0.0)
-					t_start = t_now;
-				long long timestamp = (long long)(t_now - t_start);
-				pc_signal(image, timestamp);
-			}
-		}
-	}
+	double t_start = 0.0;
 
 public:
-	GenICamera() {
+	GenICamDevice() {
 	}
 
-	~GenICamera() {
-		Stop();
+	~GenICamDevice() {
 		ReleaseObject(node_map);
 		ReleaseObject(hCamera);
-	}
-
-	virtual void operator()(const cv::Mat& image, long long timestamp) {
 	}
 
 	void Init() {
@@ -90,11 +28,42 @@ public:
 			// load the first camera
 			char driverPath[DRIVERPATHSIZE] = { 0 };
 			TranslateFileName("%CVB%\\Drivers\\GenICam.vin", driverPath, DRIVERPATHSIZE);
-			if (!LoadImageFile(driverPath, hCamera))
-				throw LibException("GenICamera::Init, Error loading \"" + std::string(driverPath) + "\" driver!");
-			initialised = true;
+			if (!LoadImageFile(driverPath, hCamera)) {
+				string message = "GenICamera::Init, Error loading \"" + std::string(driverPath) + "\" driver!";
+				throw std::exception(message.c_str());
+			}
 			NMHGetNodeMap(hCamera, node_map);
+			initialised = true;
 		}
+	}
+
+	void GetImageProps(int& width, int& height, int&channels, int&pixel_depth) {
+		width = ImageWidth(hCamera);
+		height = ImageHeight(hCamera);
+		channels = ImageDimension(hCamera);
+		pixel_depth = BitsPerPixel(ImageDatatype(hCamera, 0));
+	}
+
+	unsigned char* GetBuffer() {
+		//wait for a new buffer
+		while (G2Wait(hCamera) < 0);
+
+		void* ppixels = nullptr; intptr_t xInc = 0; intptr_t yInc = 0;
+		GetLinearAccess(hCamera, 0, &ppixels, &xInc, &yInc);
+		return (unsigned char*)ppixels;
+	}
+
+	void Start() {
+		Init();
+		if (G2Grab(hCamera) < 0) {
+			throw LibException("GenICamera::Capture, G2Grab function failure.");
+			return;
+		}
+	}
+
+	void Stop() {
+		initialised = false;
+		G2Freeze(hCamera, true);
 	}
 
 	void NodeList() {
@@ -253,6 +222,12 @@ public:
 
 		NMGetNode(node_map, node_name.c_str(), node);
 		NGetAsInteger(node, value);
+
+		char name[256] = { 0 };
+		size_t name_size = sizeof(name);
+		NInfoAsString(node, TNodeInfo::NI_AccessMode, name, name_size);
+		cerr << node_name << ", accessMode: " << name << endl;
+
 		ReleaseObject(node);
 
 		return (int)value;
@@ -346,26 +321,13 @@ public:
 
 	void TriggerSoftware() { SetNodeValue("TriggerSoftware", true); }
 
-	void Start() {
-		if (!is_running) {
-			Init();
-			if (G2Grab(hCamera) < 0) {
-				throw LibException("GenICamera::Capture, G2Grab function failure.");
-				return;
-			}
-			thread = boost::thread(&GenICamera::Capture, this);
-			is_running = true;
-		}
-	}
-
-	void Stop() {
-		is_running = false;
-		initialised = false;
-		thread.join();
-		G2Freeze(hCamera, true);
-	}
-
-	bool IsRunning() {
-		return is_running;
+	long long GetTimeStamp() {
+		//calculate timestamp in nanoseconds
+		double t_now;
+		G2GetGrabStatus(hCamera, GRAB_INFO_CMD::GRAB_INFO_TIMESTAMP, t_now);
+		if (t_start == 0.0)
+			t_start = t_now;
+		long long timestamp = (long long)(t_now - t_start);
+		return timestamp;
 	}
 };

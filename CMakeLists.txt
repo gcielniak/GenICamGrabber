@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
-project(GenICamGrab)
+project(GenICamApp)
 
 set (EXTRA_INCLUDE_DIRS include)
 set (EXTRA_LIBRARY_DIRS "")
@@ -28,9 +28,10 @@ link_directories(${EXTRA_LIBRARY_DIRS})
 
 set (SOURCES
 	include/Module.h
-	include/GenICamera.h
+	include/GenICamDevice.h
+	include/GenICamGrabber.h
 	include/ImageViewer.h
-	src/GenICamGrab.cpp)
+	src/GenICamApp.cpp)
 	
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCES})
 target_link_libraries(${CMAKE_PROJECT_NAME} ${EXTRA_LIBRARIES})
