@@ -1,68 +1,53 @@
-/************************************************************************
-	STEMMER IMAGING GmbH
- ------------------------------------------------------------------------
-  Program  :  VCGenICamGrabConsoleExample.exe
-  Author   :
-  Date     :  12/2009
-  Purpose  :  C++ Console example which shows how easy it is to Grab Images
-			  with the CVB Grab2 Interface and the GenICam vin driver.
-
-  Revision :  1.1
-  Updates  :  07/2010 CKS Adapted to CVB 2010
-			  02/2011 SDo Added -scan parameter
- ************************************************************************/
-
- //#include <Windows.h>
+#include "CameraManager.h"
 #include "ImageViewer.h"
-#include "GenICamGrabber.h"
+#include "ImageWriter.h"
+#include "AutoFocus.h"
+#include "RGBN2NDVI.h"
+#include "HistogramViewer.h"
 
 using namespace std;
 
-int main(int argc, char* argv[])
-{
-	GenICamGrabber camera, camera2;
+int main(int argc, char* argv[]) {
 
-	ImageViewer viewer("Viewer 1"), viewer2("Viewer 2");
+	vector<string> devices;
 
-	camera.Connect(viewer);
-	camera2.Connect(viewer2);
+	CameraManager::GetAvailableDevices(devices);
+
+	for (int i = 0; i < devices.size(); i++)
+		cerr << "Device " << i << ": " << devices[i] << endl;
+
+	int device_nr = 0;
+
+	InputDeviceBase* camera = 0;
 
 	try {
-		camera2.Init();
-		camera2.SetCamera(1);
-		camera.Init();
-
-		camera.AutoBrightness(true);
-		camera.TriggerMode(false);
-		cerr << "TriggerMode " << camera.TriggerMode() << endl;
-
-		camera.Start();
-		camera2.Start();
-
-//		camera.genicam_access();
-
-		cerr << "Gain: " << camera.Gain() << endl;
-		cerr << "ExposureTime: " << camera.ExposureTime() << endl;
-		cerr << "Auto Brightness: " << camera.AutoBrightness() << endl;
-
-		cerr << "Balance Ration Red " << camera.BalanceRatioRed() << endl;
-		cerr << "Balance Ration Green " << camera.BalanceRatioGreen() << endl;
-		cerr << "Balance Ration Blue " << camera.BalanceRatioBlue() << endl;
-		camera.TriggerMode(false);
-		cerr << "TriggerMode " << camera.TriggerMode() << endl;
-		camera.TriggerMode(true);
-		cerr << "TriggerMode " << camera.TriggerMode() << endl;
-		camera.TriggerMode(false);
-		cerr << "TriggerMode " << camera.TriggerMode() << endl;
-
-		while (viewer.IsRunning() && viewer2.IsRunning());
-
-		camera.Stop();
-		camera2.Stop();
+		camera = CameraManager::GetCamera(0, device_nr);
 	}
-	catch (LibException& e)	{
+	catch (std::exception& e) {
 		cerr << e.what() << endl;
 		return 0;
+	}
+
+	RGBN2NDVI ndvi_converter;
+
+	ImageViewer viewer("RGBN"), viewer_ndvi("NDVI");
+	HistogramViewer hist_viewer("HIST");
+
+//	camera.Connect(ndvi_converter);
+	camera->Connect(viewer);
+	camera->Connect(hist_viewer);
+//	ndvi_converter.Connect(viewer_ndvi);
+
+	try {
+
+		camera->Start();
+
+		while (viewer.IsRunning());
+
+		camera->Stop();
+	}
+	catch (std::exception& e)	{
+		cerr << e.what() << endl;
 	}
 
 	return 0;
