@@ -42,7 +42,7 @@ namespace GenICam {
 				throw std::runtime_error("Node::SetValue, NSetAsFloat failed.");
 		}
 
-		void SetValue(const string& node_name, boolean value) {
+		void SetValue(const string& node_name, bool value) {
 			if (NSetAsBoolean(GetNode(node_name), value) < 0)
 				throw std::runtime_error("Node::SetValue, NSetAsBoolean failed.");
 		}

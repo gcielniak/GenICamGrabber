@@ -24,7 +24,7 @@ endif()
 
 # include BOOST library if PCL is not being used
 if (NOT PCL_FOUND)
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system thread)
 
 set (EXTRA_INCLUDE_DIRS ${EXTRA_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
 set (EXTRA_LIBRARY_DIRS ${EXTRA_LIBRARY_DIRS} $ENV{BOOST_LIBRARYDIR})
@@ -33,10 +33,19 @@ add_definitions(-D_SCL_SECURE_NO_WARNINGS)
 endif()
 
 # Stemmer Library: GenICam driver
-if(EXISTS "$ENV{CVB}/Lib/C")
-    set(EXTRA_INCLUDE_DIRS ${EXTRA_INCLUDE_DIRS} "$ENV{CVB}/Lib/C")
-    set(EXTRA_LIBRARY_DIRS ${EXTRA_LIBRARY_DIRS} "$ENV{CVB}/Lib/C")
-	add_definitions(-DHAVE_GENICAM)
+#if(EXISTS "$ENV{CVB}/Lib/C")
+#if(EXISTS "$ENV{CVB}/lib")
+#    set(EXTRA_INCLUDE_DIRS ${EXTRA_INCLUDE_DIRS} "$ENV{CVB}/Lib/C")
+#    set(EXTRA_LIBRARY_DIRS ${EXTRA_LIBRARY_DIRS} "$ENV{CVB}/Lib/C")
+#    set(EXTRA_INCLUDE_DIRS ${EXTRA_INCLUDE_DIRS} "$ENV{CVB}/include")
+#    set(EXTRA_LIBRARY_DIRS ${EXTRA_LIBRARY_DIRS} "$ENV{CVB}/lib")#
+#endif()
+
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "$ENV{CVB}/cmake")
+find_package(CVB REQUIRED)
+if (CVB_FOUND)
+set (EXTRA_LIBRARIES ${EXTRA_LIBRARIES} CVB::CVCDriver CVB::CVCUtilities CVB::CVGenApi)
+add_definitions(-DHAVE_GENICAM)
 endif()
 
 include_directories(${EXTRA_INCLUDE_DIRS})

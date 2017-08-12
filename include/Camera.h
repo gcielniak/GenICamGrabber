@@ -59,7 +59,8 @@ public:
 		camera_nir.Capture();
 		std::vector<cv::Mat> channels;
 		cv::split(camera_rgb.GetImage()->image, channels); // break image into channels
-		cv::merge({ { channels[0], channels[1], channels[2], camera_nir.GetImage()->image } }, image->image); // combine rgb and nir channels
+		channels.push_back(camera_nir.GetImage()->image);
+		cv::merge(channels, image->image); // combine rgb and nir channels
 		image->timestamp = GetTimeStamp();
 	}
 

@@ -6,8 +6,8 @@
 #include "Camera.h"
 #include "InputDevice.h"
 #ifdef HAVE_GENICAM
-#include "GenICam\AD_130GE.h"
-#include "GenICam\GenieNano.h"
+#include "GenICam/AD_130GE.h"
+#include "GenICam/GenieNano.h"
 #endif
 
 using namespace std;

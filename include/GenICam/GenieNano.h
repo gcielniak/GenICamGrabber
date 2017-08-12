@@ -59,7 +59,8 @@ namespace TeledyneDALSA {
 			M.at<float>(1, 2) = dy;
 
 			cv::warpAffine(camera_rgb.GetImage()->image, camera_rgb.GetImage()->image, M, camera_rgb.GetImage()->image.size());
-			cv::merge({ { channels[0], channels[1], channels[2], camera_rgb.GetImage()->image } }, camera_rgb.GetImage()->image); // combine channels
+			channels.push_back(camera_rgb.GetImage()->image);
+			cv::merge(channels, camera_rgb.GetImage()->image); // combine channels
 		}
 
 		void SetTrans(float dx_new, float dy_new) {
