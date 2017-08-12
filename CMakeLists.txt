@@ -32,20 +32,24 @@ set (EXTRA_LIBRARIES ${EXTRA_LIBRARIES} ${Boost_LIBRARIES})
 add_definitions(-D_SCL_SECURE_NO_WARNINGS)
 endif()
 
-# Stemmer Library: GenICam driver
-#if(EXISTS "$ENV{CVB}/Lib/C")
-#if(EXISTS "$ENV{CVB}/lib")
-#    set(EXTRA_INCLUDE_DIRS ${EXTRA_INCLUDE_DIRS} "$ENV{CVB}/Lib/C")
-#    set(EXTRA_LIBRARY_DIRS ${EXTRA_LIBRARY_DIRS} "$ENV{CVB}/Lib/C")
-#    set(EXTRA_INCLUDE_DIRS ${EXTRA_INCLUDE_DIRS} "$ENV{CVB}/include")
-#    set(EXTRA_LIBRARY_DIRS ${EXTRA_LIBRARY_DIRS} "$ENV{CVB}/lib")#
-#endif()
+# Common Vision Blox by Stemmer Imaging: GenICam driver
+if (WIN32)
+
+if(EXISTS "$ENV{CVB}/Lib/C")
+    set(EXTRA_INCLUDE_DIRS ${EXTRA_INCLUDE_DIRS} "$ENV{CVB}/Lib/C")
+    set(EXTRA_LIBRARY_DIRS ${EXTRA_LIBRARY_DIRS} "$ENV{CVB}/Lib/C")
+	add_definitions(-DHAVE_GENICAM)
+endif()
+
+elseif (UNIX)
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "$ENV{CVB}/cmake")
-find_package(CVB REQUIRED)
+find_package(CVB)
 if (CVB_FOUND)
 set (EXTRA_LIBRARIES ${EXTRA_LIBRARIES} CVB::CVCDriver CVB::CVCUtilities CVB::CVGenApi)
 add_definitions(-DHAVE_GENICAM)
+endif()
+
 endif()
 
 include_directories(${EXTRA_INCLUDE_DIRS})
