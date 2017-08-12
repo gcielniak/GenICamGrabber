@@ -32,11 +32,12 @@ namespace GenICam {
 		}
 
 	public:
-		Camera() {
+		Camera() : cvb_image(0) {
 		}
 
 		~Camera() {
-			ReleaseObject(cvb_image);
+			if (cvb_image)
+				ReleaseObject(cvb_image);
 		}
 
 		virtual void Init(int device_nr = 0) {

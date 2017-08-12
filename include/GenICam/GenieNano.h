@@ -11,7 +11,7 @@ namespace TeledyneDALSA {
 		GenieNano() : dx(0.0), dy(0.0), software_trigger(false) {
 		}
 
-		void Init() {
+		void Init(int device_nr = 0) {
 			try {
 				RGBNCamera<GenICam::Camera>::Init();
 			}
@@ -63,6 +63,10 @@ namespace TeledyneDALSA {
 			cv::merge(channels, camera_rgb.GetImage()->image); // combine channels
 		}
 
+		virtual const std::string Name() {
+			return "Nano RGBN";
+		}
+		
 		void SetTrans(float dx_new, float dy_new) {
 			dx = dx_new;
 			dy = dy_new;

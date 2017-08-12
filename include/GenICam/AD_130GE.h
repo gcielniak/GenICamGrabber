@@ -47,8 +47,6 @@ namespace JAI {
 			camera_nir.SetValue("GainAuto", 1);
 
 			SoftwareTrigger(true);
-
-			cerr << "AD-130GE camera found." << endl;
 		}
 
 		void SoftwareTrigger(bool value) {

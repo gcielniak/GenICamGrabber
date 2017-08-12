@@ -28,8 +28,12 @@ namespace GenICam {
 			return node;
 		}
 	public:
+		ParameterInterface() : node_map(0) {
+		}
+
 		~ParameterInterface() {
-			ReleaseObject(node_map);
+			if (node_map)
+				ReleaseObject(node_map);
 		}
 
 		void SetValue(const string& node_name, int value) {
