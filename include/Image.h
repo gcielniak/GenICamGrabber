@@ -13,7 +13,7 @@ enum ImageType {
 };
 
 ///
-/// Basic Image class representing different formats and additional information (e.g. timestamp)
+/// Basic Image class representing different formats and including additional information (e.g. timestamp)
 ///
 
 struct Image {

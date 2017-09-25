@@ -4,6 +4,10 @@
 #include "GenICam/Camera.h"
 
 namespace JAI {
+	///
+	/// AD-130GE: dual chip, prism-based RGBN camera.
+	/// more info: http://www.jai.com/en/products/ad-130ge
+	///
 	class AD_130GE : public RGBNCamera<GenICam::Camera> {
 	protected:
 		bool software_trigger;
