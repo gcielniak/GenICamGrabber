@@ -1,9 +1,9 @@
 # GenICamGrabber
 An OpenCV-based grabber for machine vision cameras supported by the Common Vision Blox library by Stemmer Imaging.
 ## Prerequisites
-- Boost (1.61)
-- OpenCV (3.1.0)
-- Common Vision Blox (2016 SP1, 12.1)
+- [Boost](http://www.boost.org/users/history/version_1_65_1.html) (tested +1.60)
+- [OpenCV](https://opencv.org/releases.html) (tested +3.x)
+- [Common Vision Blox](https://www.commonvisionblox.com/en/cvb-download/) (tested +2016 SP1, 12.1)
 
 ## Building
 The following setup was built using CMake (3.3.0) and Visual Studio 2015 on Windows 10:
